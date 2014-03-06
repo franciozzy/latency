@@ -1,0 +1,87 @@
+Latency
+=======
+ Instant Disk Latency Measurement Tool
+ -------------------------------------
+
+ Copyright 2014 (c) Citrix
+
+
+ Disclaimer
+ ----------
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, version 2 of the License only.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+ Description
+ -----------
+  This program continuously reads or write data from/to a block device. Using
+  a pre-defined block size for the I/O operations, it reports the latency for
+  completing the requests (in microseconds).
+
+  The reports are printed roughly at every second in the following format:
+  1394101734: 110 us (981663/8890)
+
+  Where:
+    1394101734  is the unix time since epoch
+    110 us      is the latency for reading/writing that particular block size
+    (ttt/nnn)   is the latency expressed as number of operations (nnn) that
+                completed in (ttt) microseconds
+
+  Alternatively, the "-s" command line option can be used for a simplified
+  report that includes only the latency, without unit or other information.
+
+  All I/O operations are synchronous read() or write() system calls executed
+  on page-aligned pre-allocated buffers. The block device is opened with the
+  O_DIRECT flag. Apart from block devices, this program might work on pre-
+  allocated files. It will try to work out the size of the file and operate
+  on that range.
+
+
+ Compiling
+ ---------
+  gcc -o latency latency.c -Wall -O3 -s
+
+
+ Usage
+ -----
+  Usage: ./latency [ -hsw ] [ -b size ] dev_name [ iterations ]
+         -h               Print help message and quit.
+         -s               Simple output: print latency only.
+         -w               Write instead of read. USE WITH CARE.
+         -b size          Use <size> bytes at a time (default=4096).
+         dev_name         Specify block device to operate on.
+         iterations       Execute for so many iterations and exit.
+
+
+ Examples
+ --------
+  ./latency -b 32768 /dev/sdc2
+    - This will read 32KiB blocks from /dev/sdc2 and report roughly at
+      every second. Once it reaches the end of the device, it will seek
+      back to its beginning and continue.
+
+  ./latency -b 16384 /dev/sdd 10
+    - This will read 16KiB blocks from /dev/sdd and report roughly at
+      every second, ending after 10 iterations (or roughly 10 seconds).
+      If, during that time, it reaches the end of the device, it will
+      seek back to its beginning and continue.
+
+  ./latency -w -b 4096 /dev/sdb 5
+    - This will _write_ 4KiB blocks to /dev/sdb and report roughly at
+      every second, ending after 5 iterations (or roughly 5 seconds).
+      If, during that time, it reaches the end of the device, it will
+      seek back to its beginning and continue.
+
+  ./latency -q -w -b 131072 /dev/sdc1
+    - This will _write_ 128KiB blocks to /dev/sdc1 and report roughly at
+      every second. Reports will be simplified and include only the latency
+      without unit or any other information.
