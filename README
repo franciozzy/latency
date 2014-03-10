@@ -57,6 +57,7 @@ Latency
          -h               Print help message and quit.
          -s               Simple output: print latency only.
          -w               Write instead of read. USE WITH CARE.
+         -z               Write zeros instead of random data.
          -b size          Use <size> bytes at a time (default=4096).
          dev_name         Specify block device to operate on.
          iterations       Execute for so many iterations and exit.
@@ -81,7 +82,7 @@ Latency
       If, during that time, it reaches the end of the device, it will
       seek back to its beginning and continue.
 
-  ./latency -q -w -b 131072 /dev/sdc1
-    - This will _write_ 128KiB blocks to /dev/sdc1 and report roughly at
-      every second. Reports will be simplified and include only the latency
-      without unit or any other information.
+  ./latency -q -w -z -b 131072 /dev/sdc1
+    - This will _write_ 128KiB blocks of zeros to /dev/sdc1 and report
+      roughly at every second. Reports will be simplified and include
+      only the latency without unit or any other information.
