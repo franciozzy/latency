@@ -59,6 +59,7 @@ uint32_t        count = 0;              // Number of reads
 int32_t         calarm = -1;            // Alarm counter
 uint8_t         falarm = 0;             // Alarm flag
 uint8_t         simple = 0;             // Simple output
+uint8_t         zeros = 0;              // Write zeros
 
 // Auxiliary functions
 void usage(char *argv0){
@@ -77,6 +78,8 @@ void usage(char *argv0){
                     "only.\n");
     fprintf(stderr, "       -w               Write instead of read. USE " \
                     "WITH CARE.\n");
+    fprintf(stderr, "       -z               Write zeros instead of random "
+                    "data.\n");
     fprintf(stderr, "       -b size          Use <size> bytes at a time " \
                     "(default=%d).\n", MT_BUFSIZE);
     fprintf(stderr, "       dev_name         Specify block device to " \
@@ -118,7 +121,7 @@ int main(int argc, char **argv){
     int		i;		// Temporary integer
 
     // Fetch arguments
-    while ((i = getopt(argc, argv, "hwsb:")) != -1){
+    while ((i = getopt(argc, argv, "hwszb:")) != -1){
         switch (i){
         case 's': // Set output to simple
             if (simple){
@@ -136,6 +139,15 @@ int main(int argc, char **argv){
                 goto err;
             }
             optype = MT_OPWRITE;
+            break;
+
+        case 'z': // Set output to zeros
+            if (zeros){
+                fprintf(stderr, "%s: Error, already set to write zeros.\n",
+                        argv[0]);
+                goto err;
+            }
+            zeros = 1;
             break;
 
         case 'b': // Set bufsize
@@ -229,7 +241,9 @@ int main(int argc, char **argv){
 
     // Fill buffer with random data if writing
     if (optype == MT_OPWRITE){
-        if ((urandfd = open("/dev/urandom", O_RDONLY)) < 0){
+        if (zeros){
+            memset(buf, 0, bufsize);
+        }else if ((urandfd = open("/dev/urandom", O_RDONLY)) < 0){
             perror("open");
             fprintf(stderr, "%s: warning: writing zeros instead of random.\n",
                             argv[0]);
