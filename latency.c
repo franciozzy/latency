@@ -78,7 +78,7 @@ void usage(char *argv0){
                     "only.\n");
     fprintf(stderr, "       -w               Write instead of read. USE " \
                     "WITH CARE.\n");
-    fprintf(stderr, "       -z               Write zeros instead of random "
+    fprintf(stderr, "       -z               Write zeros instead of random " \
                     "data.\n");
     fprintf(stderr, "       -b size          Use <size> bytes at a time " \
                     "(default=%d).\n", MT_BUFSIZE);
