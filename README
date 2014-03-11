@@ -82,7 +82,7 @@ Latency
       If, during that time, it reaches the end of the device, it will
       seek back to its beginning and continue.
 
-  ./latency -q -w -z -b 131072 /dev/sdc1
+  ./latency -s -w -z -b 131072 /dev/sdc1
     - This will _write_ 128KiB blocks of zeros to /dev/sdc1 and report
       roughly at every second. Reports will be simplified and include
       only the latency without unit or any other information.
