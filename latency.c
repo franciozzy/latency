@@ -70,21 +70,21 @@ void usage(char *argv0){
     for (i=0; i<MT_PROGNAME_LEN; i++) fprintf(stderr, "-");
     fprintf(stderr, "\n%s\n", MT_PROGNAME);
     for (i=0; i<MT_PROGNAME_LEN; i++) fprintf(stderr, "-");
-    fprintf(stderr, "\nUsage: %s [ -hsw ] [ -b size ] dev_name [ " \
+    fprintf(stderr, "\nUsage: %s [ -hsw ] [ -b size ] dev_name [ "
                     "iterations ]\n", argv0);
-    fprintf(stderr, "       -h               Print help message and " \
+    fprintf(stderr, "       -h               Print help message and "
                     "quit.\n");
-    fprintf(stderr, "       -s               Simple output: print latency " \
+    fprintf(stderr, "       -s               Simple output: print latency "
                     "only.\n");
-    fprintf(stderr, "       -w               Write instead of read. USE " \
+    fprintf(stderr, "       -w               Write instead of read. USE "
                     "WITH CARE.\n");
-    fprintf(stderr, "       -z               Write zeros instead of random " \
+    fprintf(stderr, "       -z               Write zeros instead of random "
                     "data.\n");
-    fprintf(stderr, "       -b size          Use <size> bytes at a time " \
+    fprintf(stderr, "       -b size          Use <size> bytes at a time "
                     "(default=%d).\n", MT_BUFSIZE);
-    fprintf(stderr, "       dev_name         Specify block device to " \
+    fprintf(stderr, "       dev_name         Specify block device to "
                     "operate on.\n");
-    fprintf(stderr, "       iterations       Execute for so many iterations " \
+    fprintf(stderr, "       iterations       Execute for so many iterations "
                     "and exit.\n");
 }
 
@@ -134,7 +134,7 @@ int main(int argc, char **argv){
 
         case 'w': // Set OP to write
             if (optype){
-                fprintf(stderr, "%s: Error, operation type already set to " \
+                fprintf(stderr, "%s: Error, operation type already set to "
                                 "'write'.\n", argv[0]);
                 goto err;
             }
@@ -152,7 +152,7 @@ int main(int argc, char **argv){
 
         case 'b': // Set bufsize
             if (bufsize != -1){
-                fprintf(stderr, "%s: Error, buffer size already set to %" \
+                fprintf(stderr, "%s: Error, buffer size already set to %"
                                 PRId64".\n", argv[0], bufsize);
                 goto err;
             }
@@ -234,7 +234,7 @@ int main(int argc, char **argv){
     // Allocates rbuf according to the systems page size
     if (posix_memalign((void **)&(buf), psize, bufsize) != 0){
         //perror("posix_memalign"); // posix_memalign doesn't set errno.
-        fprintf(stderr, "%s: Error malloc'ing aligned buf, %"PRId64" bytes " \
+        fprintf(stderr, "%s: Error malloc'ing aligned buf, %"PRId64" bytes "
                         "long.\n", argv[0], bufsize);
         goto err;
     }
@@ -309,7 +309,7 @@ int main(int argc, char **argv){
             // Reset the I/O position
             if ((bytes <= 0) && (lseek(bdevfd, 0, SEEK_SET) < 0)){
                 perror("lseek");
-                fprintf(stderr, "%s: Error offsetting to the start of the " \
+                fprintf(stderr, "%s: Error offsetting to the start of the "
                                 "device.\n", argv[0]);
                 err = 1;
                 goto out;
