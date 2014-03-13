@@ -59,6 +59,7 @@ uint32_t        count = 0;              // Number of reads
 int32_t         calarm = -1;            // Alarm counter
 uint8_t         falarm = 0;             // Alarm flag
 uint8_t         simple = 0;             // Simple output
+uint8_t         throughput = 0;         // Throughput output
 uint8_t         zeros = 0;              // Write zeros
 
 // Auxiliary functions
@@ -76,6 +77,9 @@ void usage(char *argv0){
                     "quit.\n");
     fprintf(stderr, "       -s               Simple output: print latency "
                     "only.\n");
+    fprintf(stderr, "       -t               Measure throughput instead of "
+                    "latency\n                        (requires iteration "
+                    "counter).\n");
     fprintf(stderr, "       -w               Write instead of read. USE "
                     "WITH CARE.\n");
     fprintf(stderr, "       -z               Write zeros instead of random "
@@ -90,6 +94,105 @@ void usage(char *argv0){
 
 void sigalarm_h(){
     falarm = 1;
+}
+
+static int run_throughput(int bdevfd, char *buf, off_t bufsize, int optype){
+    int64_t          total = 0;             // Total number of bytes io'ed
+    ssize_t          bytes;             // Number of bytes io'ed (each io)
+
+    // Setup alarm
+    signal(SIGALRM, sigalarm_h);
+    alarm(calarm);
+
+    // Loop
+    while(!falarm){
+        if (optype == MT_OPWRITE)
+            bytes = write(bdevfd, buf, bufsize);
+        else
+            bytes = read(bdevfd, buf, bufsize);
+
+        // Reset the I/O position
+        if (bytes <= 0) {
+            if (lseek(bdevfd, 0, SEEK_SET) < 0) {
+                perror("lseek");
+                fprintf(stderr, "Error offsetting to the start of the "
+                        "device.\n");
+                return 1;
+            }
+        } else {
+            total += bytes;
+        }
+    }
+
+    printf("%" PRId64 "\n", total);
+    return 0;
+}
+
+static int run_latency(int bdevfd, char *buf, off_t bufsize, int optype){
+    // Summary related
+    ssize_t          bytes;             // Number of bytes io'ed (each io)
+    struct itimerval itv;               // iTimer setup
+    struct timeval   ts, ts1, ts2;      // Read timers
+
+    // Setup alarm
+    signal(SIGALRM, sigalarm_h);
+    itv.it_interval.tv_sec = 1;
+    itv.it_interval.tv_usec = 0;
+    itv.it_value.tv_sec = 1;
+    itv.it_value.tv_usec = 0;
+    setitimer(ITIMER_REAL, &itv, NULL);
+
+    // Loop
+    while(calarm){
+        // Dump registers if alarmed
+        if (falarm){
+            if (simple){
+                if (count)
+                    fprintf(stdout, "%u\n", totaltime/count);
+                else
+                    fprintf(stdout, "0\n");
+            }else{
+                gettimeofday(&ts, NULL);
+                if (count)
+                    fprintf(stdout, "%ld: %u us (%u/%u)\n", ts.tv_sec,
+                                    totaltime/count, totaltime, count);
+                else
+                    fprintf(stdout, "%ld: 0 us (%u/%u)\n", ts.tv_sec,
+                                    totaltime, count);
+            }
+            fflush(stdout);
+
+            count = totaltime = falarm = 0;
+            if (calarm > 0)
+                calarm--;
+        }
+
+        // Execute IO operation
+        gettimeofday(&ts1, NULL);
+        if (optype == MT_OPWRITE)
+            bytes = write(bdevfd, buf, bufsize);
+        else
+            bytes = read(bdevfd, buf, bufsize);
+        gettimeofday(&ts2, NULL);
+
+        // Increment number of total bytes io'ed
+        if (bytes == bufsize){
+            // totaltime += ((ts2.tv_sec - ts1.tv_sec)*1000 + 
+            //              (ts2.tv_usec - ts1.tv_usec)/1000); // ms
+            totaltime += ((ts2.tv_sec - ts1.tv_sec)*1000000 + (ts2.tv_usec -
+                         ts1.tv_usec)); // us
+            count++;
+        }else{
+            // Reset the I/O position
+            if ((bytes <= 0) && (lseek(bdevfd, 0, SEEK_SET) < 0)){
+                perror("lseek");
+                fprintf(stderr, "Error offsetting to the start of the "
+                                "device.\n");
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 // Main function
@@ -112,16 +215,11 @@ int main(int argc, char **argv){
     int              psize;             // System pagesize
     int              err = 0;           // Return code
 
-    // Summary related
-    ssize_t          bytes;             // Number of bytes io'ed (each io)
-    struct itimerval itv;               // iTimer setup
-    struct timeval   ts, ts1, ts2;      // Read timers
-
     // General
     int		i;		// Temporary integer
 
     // Fetch arguments
-    while ((i = getopt(argc, argv, "hwszb:")) != -1){
+    while ((i = getopt(argc, argv, "hwstzb:")) != -1){
         switch (i){
         case 's': // Set output to simple
             if (simple){
@@ -130,6 +228,15 @@ int main(int argc, char **argv){
                 goto err;
             }
             simple = 1;
+            break;
+
+        case 't': // Measure throughput instead of latency
+            if (throughput){
+                fprintf(stderr, "%s: Error, 'throughput' option already set.\n",
+                        argv[0]);
+                goto err;
+            }
+            throughput = 1;
             break;
 
         case 'w': // Set OP to write
@@ -193,6 +300,10 @@ int main(int argc, char **argv){
                             argv[0]);
             goto err;
         }
+    }else if (throughput){
+        fprintf(stderr, "%s: Iteration counter is required for throughput "
+                        "measurement.\n", argv[0]);
+        goto err;
     }
 
     // Set defaults
@@ -257,65 +368,10 @@ int main(int argc, char **argv){
         }
     }
 
-    // Setup alarm
-    signal(SIGALRM, sigalarm_h);
-    itv.it_interval.tv_sec = 1;
-    itv.it_interval.tv_usec = 0;
-    itv.it_value.tv_sec = 1;
-    itv.it_value.tv_usec = 0;
-    setitimer(ITIMER_REAL, &itv, NULL);
-
-    // Loop
-    while(calarm){
-        // Dump registers if alarmed
-        if (falarm){
-            if (simple){
-                if (count)
-                    fprintf(stdout, "%u\n", totaltime/count);
-                else
-                    fprintf(stdout, "0\n");
-            }else{
-                gettimeofday(&ts, NULL);
-                if (count)
-                    fprintf(stdout, "%ld: %u us (%u/%u)\n", ts.tv_sec,
-                                    totaltime/count, totaltime, count);
-                else
-                    fprintf(stdout, "%ld: 0 us (%u/%u)\n", ts.tv_sec,
-                                    totaltime, count);
-            }
-            fflush(stdout);
-
-            count = totaltime = falarm = 0;
-            if (calarm > 0)
-                calarm--;
-        }
-
-        // Execute IO operation
-        gettimeofday(&ts1, NULL);
-        if (optype == MT_OPWRITE)
-            bytes = write(bdevfd, buf, bufsize);
-        else
-            bytes = read(bdevfd, buf, bufsize);
-        gettimeofday(&ts2, NULL);
-
-        // Increment number of total bytes io'ed
-        if (bytes == bufsize){
-            // totaltime += ((ts2.tv_sec - ts1.tv_sec)*1000 + 
-            //              (ts2.tv_usec - ts1.tv_usec)/1000); // ms
-            totaltime += ((ts2.tv_sec - ts1.tv_sec)*1000000 + (ts2.tv_usec -
-                         ts1.tv_usec)); // us
-            count++;
-        }else{
-            // Reset the I/O position
-            if ((bytes <= 0) && (lseek(bdevfd, 0, SEEK_SET) < 0)){
-                perror("lseek");
-                fprintf(stderr, "%s: Error offsetting to the start of the "
-                                "device.\n", argv[0]);
-                err = 1;
-                goto out;
-            }
-        }
-    }
+    if (throughput)
+        err = run_throughput(bdevfd, buf, bufsize, optype);
+    else
+        err = run_latency(bdevfd, buf, bufsize, optype);
 
     // Bypass error section
     goto out;
