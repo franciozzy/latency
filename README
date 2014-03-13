@@ -39,6 +39,10 @@ Latency
   Alternatively, the "-s" command line option can be used for a simplified
   report that includes only the latency, without unit or other information.
 
+  Finally, the "-t" command line option can be used to measure throughput
+  instead of latency. In this mode, the iteration count is required. The tool
+  prints the total number of bytes read or written when it completes.
+
   All I/O operations are synchronous read() or write() system calls executed
   on page-aligned pre-allocated buffers. The block device is opened with the
   O_DIRECT flag. Apart from block devices, this program might work on pre-
@@ -56,6 +60,8 @@ Latency
   Usage: ./latency [ -hsw ] [ -b size ] dev_name [ iterations ]
          -h               Print help message and quit.
          -s               Simple output: print latency only.
+         -t               Measure throughput instead of latency
+                          (requires iteration counter).
          -w               Write instead of read. USE WITH CARE.
          -z               Write zeros instead of random data.
          -b size          Use <size> bytes at a time (default=4096).
@@ -86,3 +92,9 @@ Latency
     - This will _write_ 128KiB blocks of zeros to /dev/sdc1 and report
       roughly at every second. Reports will be simplified and include
       only the latency without unit or any other information.
+
+  ./latency -w -t -b 4096 /dev/sdb 5
+    - This will write 4KiB blocks to /dev/sdb and will report, after
+      5 seconds, how many bytes were written. If, during that time, it
+      reaches the end of the device, it will seek back to its beginning
+      and continue.
