@@ -230,7 +230,7 @@ int main(int argc, char **argv){
     int		i;		// Temporary integer
 
     // Fetch arguments
-    while ((i = getopt(argc, argv, "hwstzbn:")) != -1){
+    while ((i = getopt(argc, argv, "hwstzb:n:")) != -1){
         switch (i){
         case 's': // Set output to simple
             if (simple){
