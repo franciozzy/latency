@@ -65,6 +65,7 @@ Latency
          -w               Write instead of read. USE WITH CARE.
          -z               Write zeros instead of random data.
          -b size          Use <size> bytes at a time (default=4096).
+         -n num           Write a total of <num> blocks then stop.
          dev_name         Specify block device to operate on.
          iterations       Execute for so many iterations and exit.
 
@@ -81,6 +82,12 @@ Latency
       every second, ending after 10 iterations (or roughly 10 seconds).
       If, during that time, it reaches the end of the device, it will
       seek back to its beginning and continue.
+
+  ./latency -b 16384 -n 1024 /dev/sdd
+    - This will read no more than 1024 16KiB blocks from /dev/sdd and
+      report roughly at every second. If, during that time, it reaches
+      the end of the device, it will seek back to its beginning and
+      continue.
 
   ./latency -w -b 4096 /dev/sdb 5
     - This will _write_ 4KiB blocks to /dev/sdb and report roughly at
