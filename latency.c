@@ -86,6 +86,8 @@ void usage(char *argv0){
                     "data.\n");
     fprintf(stderr, "       -b size          Use <size> bytes at a time "
                     "(default=%d).\n", MT_BUFSIZE);
+    fprintf(stderr, "       -n num           Write a total of <num> blocks "
+                    "then stop.\n");
     fprintf(stderr, "       dev_name         Specify block device to "
                     "operate on.\n");
     fprintf(stderr, "       iterations       Execute for so many iterations "
@@ -128,11 +130,13 @@ static int run_throughput(int bdevfd, char *buf, off_t bufsize, int optype){
     return 0;
 }
 
-static int run_latency(int bdevfd, char *buf, off_t bufsize, int optype){
+static int run_latency(int bdevfd, char *buf, off_t bufsize, int optype,
+                       int64_t numblocks){
     // Summary related
     ssize_t          bytes;             // Number of bytes io'ed (each io)
     struct itimerval itv;               // iTimer setup
     struct timeval   ts, ts1, ts2;      // Read timers
+    int64_t          blockcount = 0;    // Total number of blocks io'ed
 
     // Setup alarm
     signal(SIGALRM, sigalarm_h);
@@ -144,8 +148,8 @@ static int run_latency(int bdevfd, char *buf, off_t bufsize, int optype){
 
     // Loop
     while(calarm){
-        // Dump registers if alarmed
-        if (falarm){
+        // Dump registers if alarmed or we've written the maximum number
+        if (falarm || (numblocks >= 0 && blockcount == numblocks)){
             if (simple){
                 if (count)
                     fprintf(stdout, "%u\n", totaltime/count);
@@ -167,6 +171,10 @@ static int run_latency(int bdevfd, char *buf, off_t bufsize, int optype){
                 calarm--;
         }
 
+	// Stop if we've reached the limit on the number of blocks to i/o
+	if (numblocks >= 0 && blockcount == numblocks)
+	    break;
+
         // Execute IO operation
         gettimeofday(&ts1, NULL);
         if (optype == MT_OPWRITE)
@@ -174,6 +182,8 @@ static int run_latency(int bdevfd, char *buf, off_t bufsize, int optype){
         else
             bytes = read(bdevfd, buf, bufsize);
         gettimeofday(&ts2, NULL);
+
+        ++blockcount;
 
         // Increment number of total bytes io'ed
         if (bytes == bufsize){
@@ -200,9 +210,10 @@ int main(int argc, char **argv){
     // Local variables
 
     // IO related
-    char             *buf    = NULL;    // IO Buffer
-    off_t            bufsize = -1;      // IO Buffer size
-    int              optype  = MT_OPREAD;
+    char             *buf      = NULL;    // IO Buffer
+    off_t            bufsize   = -1;      // IO Buffer size
+    int              optype    = MT_OPREAD;
+    int64_t          numblocks = -1;      // Maximum number of blocks
 
     // Block device related
     char             *bdevfn = NULL;    // Block device file name
@@ -219,7 +230,7 @@ int main(int argc, char **argv){
     int		i;		// Temporary integer
 
     // Fetch arguments
-    while ((i = getopt(argc, argv, "hwstzb:")) != -1){
+    while ((i = getopt(argc, argv, "hwstzbn:")) != -1){
         switch (i){
         case 's': // Set output to simple
             if (simple){
@@ -267,6 +278,20 @@ int main(int argc, char **argv){
             if (bufsize <= 0){
                 fprintf(stderr, "%s: Invalid buffer size %"PRId64".\n",
                                 argv[0], bufsize);
+                goto err;
+            }
+            break;
+
+        case 'n': // Set maximum number of blocks
+            if (numblocks != -1){
+                fprintf(stderr, "%s: Error, number of blocks already set to %"
+		                PRId64".\n", argv[0], numblocks);
+                goto err;
+            }
+            numblocks = atol(optarg);
+            if (numblocks <= 0){
+                fprintf(stderr, "%s: Invalid number of blocks %"PRId64".\n",
+                                argv[0], numblocks);
                 goto err;
             }
             break;
@@ -371,7 +396,7 @@ int main(int argc, char **argv){
     if (throughput)
         err = run_throughput(bdevfd, buf, bufsize, optype);
     else
-        err = run_latency(bdevfd, buf, bufsize, optype);
+        err = run_latency(bdevfd, buf, bufsize, optype, numblocks);
 
     // Bypass error section
     goto out;
