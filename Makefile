@@ -1,5 +1,11 @@
-.PHONY: all
-all: latency
+CC=gcc
+CFLAGS=-Wall -O3 -s
+TARGET=latency
+
+all: $(TARGET)
 
 %: %.c
-	gcc -o $@ $< -Wall -O3 -s
+	$(CC) -o $@ $< $(CFLAGS)
+
+clean:
+	rm -f $(TARGET)
