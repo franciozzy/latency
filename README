@@ -57,7 +57,7 @@ Latency
 
  Usage
  -----
-  Usage: ./latency [ -hsw ] [ -b size ] dev_name [ iterations ]
+  Usage: ./latency [ -hstw ] [ -b size ] dev_name [ iterations ]
          -h               Print help message and quit.
          -s               Simple output: print latency only.
          -t               Measure throughput instead of latency

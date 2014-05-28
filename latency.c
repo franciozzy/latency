@@ -71,7 +71,7 @@ void usage(char *argv0){
     for (i=0; i<MT_PROGNAME_LEN; i++) fprintf(stderr, "-");
     fprintf(stderr, "\n%s\n", MT_PROGNAME);
     for (i=0; i<MT_PROGNAME_LEN; i++) fprintf(stderr, "-");
-    fprintf(stderr, "\nUsage: %s [ -hsw ] [ -b size ] dev_name [ "
+    fprintf(stderr, "\nUsage: %s [ -hstw ] [ -b size ] dev_name [ "
                     "iterations ]\n", argv0);
     fprintf(stderr, "       -h               Print help message and "
                     "quit.\n");
